@@ -16,7 +16,10 @@ def get_time(info):
         else:
             res = info.find('th', string='Running time').parent.stripped_strings
             res = list(res)[1]
-        return re.search(r'\d+', res).group()
+            if res[0:1].isalpha() == True:
+                return []
+            else:
+                return re.search(r'\d+', res).group()
 
 def get_budget(info, number):
     res = []
@@ -51,14 +54,16 @@ def format_number(s, mil, bil):
     return n
 
 def results(name, awards, year=2020):
-    nom = won = 0
-    noms = awards.loc[name].nom[1:-1].split()
-    wins = awards.loc[name].won[1:-1].split()
-    for y in noms:
-        if int(y) < year: nom += 1
-    for y in wins:
-        if int(y) < year: won += 1
-    return nom, won
+    if name in awards.index:
+        nom = won = 0
+        noms = awards.loc[name].nom[1:-1].split()
+        wins = awards.loc[name].won[1:-1].split()
+        for y in noms:
+            if int(y) < year: nom += 1
+        for y in wins:
+            if int(y) < year: won += 1
+        return nom, won
+    else: return 0, 0
 
 def results_person(name, awards, year=2020):
     if name in awards.index:
@@ -92,27 +97,35 @@ def all_results_person(name, year=2020):
     glo = results_person(name, globes, year)
     return osc[0]+baf[0]+glo[0], osc[1]+baf[1]+glo[1]
 
+def get_rating(index, credit, year):
+    nom = won = 0
+    for name in df.iloc[index][credit]:
+        rating = all_results_person(name, year)
+        nom += rating[0]
+        won += rating[1]
+    return nom, won
+
 
 oscars = pd.read_csv('oscar_noms_by_year.csv', index_col='name')
 baftas = pd.read_csv('bafta_noms_by_year.csv', index_col='name')
 globes = pd.read_csv('globe_noms_by_year.csv', index_col='name')
 
-df = pd.DataFrame(columns=['title', 'director', 'producer', 'writer', 'cast', 'music', 'cinematography', 'distribution', 'time', 'budget', 'box_office'])
+df = pd.DataFrame(columns=['title', 'director', 'producer', 'writer', 'cast', 'music', 'cinematography', 'editing', 'distribution', 'time', 'language', 'budget', 'box_office'])
 
-file = requests.get('https://en.wikipedia.org/wiki/1977_in_film')
+file = requests.get('https://en.wikipedia.org/wiki/1989_in_film')
 soup = bs(file.text, 'html.parser')
 
 s = [link['href'] for link in soup.select('i a')]
 
 s
+s.index('/wiki/DeepStar_Six')
+s.index('/wiki/The_Road_to_Ruin_(1934_film)')
 
-s.index('/wiki/The_Sentinel_(1977_film)')
-
-s = s[1:195]
+s = s[56:485]
 
 s = list(set(s))
 
-for title in s[:40]:
+for title in s:
 
     url = 'https://en.wikipedia.org' + title
     file = requests.get(url)
@@ -127,21 +140,30 @@ for title in s[:40]:
     cast = get_credit(info, 'Starring')
     music = get_credit(info, 'Music by')
     cinematography = get_credit(info, 'Cinematography')
+    editing = get_credit(info, 'Edited by')
     distribution = get_credit(info, 'Distributed by')
     time = get_time(info)
+    language = get_credit(info, 'Language')
     budget = get_budget(info, 'Budget')
     box_office = get_budget(info, 'Box office')
-    title = info.find('th').text
+    title = info.find('th').strings
+    titlelist = list(title)
+    title = ''.join([ i + ' ' for i in titlelist]).strip()
 
-    res = dict(title=title, director=director, producer=producer, writer=writer, cast=cast, music=music, cinematography=cinematography, distribution=distribution, time=time, budget=budget, box_office=box_office)
+    res = dict(title=title, director=director, producer=producer, writer=writer, cast=cast, music=music, cinematography=cinematography, editing=editing, distribution=distribution, time=time, language=language, budget=budget, box_office=box_office)
 
     df = df.append(res, ignore_index=True)
+
 
 df
 
 
-dir = df.iloc[20].director
-pro = df.iloc[20].cast
+df.to_pickle('films_1989.pkl')
+
+##############################################################################
+
+dir = df.iloc[4].director
+pro = df.iloc[4].cast
 
 def get_rating(index, credit, year):
     nom = won = 0
@@ -151,8 +173,18 @@ def get_rating(index, credit, year):
         won += rating[1]
     return nom, won
 
-get_rating(20, 'cast', 2020)
-all_results_person("Richard Dreyfuss", 2020)
-all_results_person("Teri Garr", 2020)
-all_results_person("Melinda Dillon", 2020)
+get_rating(4, 'cast', 2020)
+all_results_person("Tom Berenger", 2020)
+all_results_person("Mimi Rogers", 2020)
+all_results_person("Lorraine Bracco", 2020)
 all_results_person("François Truffaut", 2020)
+
+all_results_person("Jack Nicholson")
+oscars.filter(like="Jack Nicholson", axis=0).nom.values
+
+
+url = 'https://en.wikipedia.org/wiki/Dr._Strangelove'
+file = requests.get(url)
+soup = bs(file.text, 'html.parser')
+
+info = soup.find(class_='infobox vevent')
