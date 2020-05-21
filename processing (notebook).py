@@ -22,6 +22,12 @@ def results_person(name, awards, year=2020):
         return nom, won
     else: return 0, 0
 
+def all_results_person(name, year=2020):
+    osc = results_person(name, oscars, year)
+    baf = results_person(name, baftas, year)
+    glo = results_person(name, globes, year)
+    return osc[0]+baf[0]+glo[0], osc[1]+baf[1]+glo[1]
+
 def split_results_person(name, year=2020):
     osc = results_person(name, oscars, year)
     baf = results_person(name, baftas, year)
@@ -36,6 +42,75 @@ def get_split_rating(index, credit, year):
         for key, value in rating.items():
             res[key] += rating[key]
     return res
+
+oscars = pd.read_csv('oscar_noms_by_year.csv', index_col='name')
+baftas = pd.read_csv('bafta_noms_by_year.csv', index_col='name')
+globes = pd.read_csv('globe_noms_by_year.csv', index_col='name')
+os = pd.read_pickle('oscar_film_noms.pkl')
+
+y = 1977
+
+df = pd.read_pickle('./years_pickle/films_' + str(y) + '.pkl')
+
+df
+
+#######################################################################
+
+processed = pd.DataFrame(columns=['title', 'director', 'producer', 'cast', 'noms', 'wins'])
+
+for n in df.index:
+    d = {}
+    d['title'] = df.iloc[n].title
+    d['director'] = get_rating(n, 'director', y)
+    d['producer'] = get_rating(n, 'producer', y)
+    d['cast'] = get_rating(n, 'cast', y)
+
+    t = df.iloc[n].title + ' ' + str(y)
+    if len(os.query('film == @t').film.values) == 0:
+        d['noms'] = 0
+        d['wins'] = 0
+    else:
+        d['noms'] = os[os['film'] == t].noms.values[0]
+        d['wins'] = os[os['film'] == t].wins.values[0]
+
+
+    processed = processed.append(d, ignore_index=True)
+
+
+processed[processed.wins != 0]
+
+bob = split_results_person('Robert De Niro', year=2020)
+al = split_results_person('Al Pacino', year=2020)
+al
+
+r = get_split_rating(136, 'cast', 1989)
+r
+
+cols = pd.MultiIndex.from_product([['director', 'producer', 'cast'], ['o_n', 'b_n', 'g_n', 'o_w', 'b_w', 'g_w']])
+
+r = {'al': al, 'bob': bob}
+
+
+f = pd.DataFrame(columns=cols)
+f
+f = f.append(pd.DataFrame.from_dict(r).unstack(), ignore_index=True)
+
+f
+
+
+
+f2 = pd.DataFrame(columns=['o_n', 'b_n', 'g_n', 'o_w', 'b_w', 'g_w'])
+f2
+f2.append(r, ignore_index=True)
+
+
+
+cols = pd.MultiIndex.from_product([['director', 'producer', 'cast', 'writer', 'music', 'cinematography', 'editing'], ['o_n', 'b_n', 'g_n', 'o_w', 'b_w', 'g_w']])
+
+proc = pd.DataFrame(columns=cols)
+
+##############################################################
+
 
 def process_budget(b):
     b = list(b)
@@ -86,22 +161,29 @@ def process(df):
 
     return proc
 
-
-oscars = pd.read_csv('oscar_noms_by_year.csv', index_col='name')
-baftas = pd.read_csv('bafta_noms_by_year.csv', index_col='name')
-globes = pd.read_csv('globe_noms_by_year.csv', index_col='name')
-os = pd.read_pickle('oscar_film_noms.pkl')
-
-
-df = pd.read_pickle('./years_pickle/films_1971.pkl')
-
-for y in range(1972, 1990):
-    dfnext = pd.read_pickle('./years_pickle/films_' + str(y) + '.pkl')
-    df = pd.concat([df, dfnext])
-
-df.index = pd.RangeIndex(len(df.index))
-
-
 proc = process(df)
 
-proc.to_pickle('1971-1989_processed.pkl')
+proc
+
+########################################################################
+
+proc.iloc[193]
+
+r1 = proc.loc[proc.title == 'Indiana Jones and the Last Crusade']#.o_n.values[0]
+r2 = proc.loc[proc.title == 'Steel Magnolias']
+
+
+f1 = pd.DataFrame(data=[1], columns=['arse'])
+f2 = pd.DataFrame(data=[2, 3], columns=['arse'])
+
+f3 = pd.concat([f1, f2])
+f3
+f3.index = pd.RangeIndex(0, len(f3.index))
+
+s = ['1', '2', '3', [], '5']
+s = pd.Series([ np.nan if x == [] else x for x in s ]).apply(float)
+
+b = list(df.budget)
+b = [ np.nan if x == [] else x for x in b ]
+b = [ float(x.replace(',', '')) if type(x) != float else x for x in b ]
+b
