@@ -44,7 +44,7 @@ def process_budget(b):
     return pd.Series(b)
 
 
-def process(df):
+def process(df, y):
     cols = pd.MultiIndex.from_product([['director', 'producer', 'cast', 'writer', 'music', 'cinematography', 'editing'], ['o_n', 'b_n', 'g_n', 'o_w', 'b_w', 'g_w']])
 
     majors = ['Paramount', 'Warner', 'Columbia', 'Disney', 'Universal']
@@ -92,16 +92,16 @@ baftas = pd.read_csv('bafta_noms_by_year.csv', index_col='name')
 globes = pd.read_csv('globe_noms_by_year.csv', index_col='name')
 os = pd.read_pickle('oscar_film_noms.pkl')
 
-
-df = pd.read_pickle('./years_pickle/films_1971.pkl')
+start = 1971
+df = pd.read_pickle('./years_pickle/films_' + str(start) + '.pkl')
+proc = process(df, start)
 
 for y in range(1972, 1990):
-    dfnext = pd.read_pickle('./years_pickle/films_' + str(y) + '.pkl')
-    df = pd.concat([df, dfnext])
+    df = pd.read_pickle('./years_pickle/films_' + str(y) + '.pkl')
+    procnext = process(df, y)
+    proc = pd.concat([proc, procnext])
 
-df.index = pd.RangeIndex(len(df.index))
+proc.index = pd.RangeIndex(len(proc.index))
 
-
-proc = process(df)
 
 proc.to_pickle('1971-1989_processed.pkl')
